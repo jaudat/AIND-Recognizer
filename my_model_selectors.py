@@ -103,9 +103,9 @@ class SelectorCV(ModelSelector):
 
     def get_model_at(self, num_component, index):
         x_train, train_length = combine_sequences(index, self.sequences)
-        self.x = x_train
-        self.length = train_length
-        return self.base_model(num_component)
+        model = self.base_model(num_component)
+        model = model.fit(x_train, train_length)
+        return model
 
     def get_score_at(self, model, index):
         x_test, test_length = combine_sequences(index, self.sequences)
@@ -120,22 +120,21 @@ class SelectorCV(ModelSelector):
         # Split to either 3 states or the length of sequence whichever is smaller
         split_method = KFold( n_splits=min(3,len(self.sequences)) )
 
-        for n_components in range(self.min_n_components, self.max_n_components+1):
+        for n_component in range(self.min_n_components, self.max_n_components+1):
             for train_index, test_index in split_method.split(self.sequences):
                 try:
-                    print("Hello")
                     loop_model = self.get_model_at(n_component, train_index)
-                    if self.verbose:
-                        print("Getting model from training data at index: {}".format(index))
                     loop_logL = self.get_score_at(loop_model, test_index)
-                    if self.verbose:
-                        print("Getting score model and testing data at index {}".format(index) )
-                    if self.verbose:
-                        print("loop_logL: {} and best_logL: {}".format(loop_logL, best_logL))
                     if loop_logL > best_logL:
                         best_model = loop_model
                         best_logL = loop_logL
                 except:
                     if self.verbose:
-                        print("failure on {} with {} states".format(self.this_word, n_components))
+                        print("failure on {} with {} states".format(self.this_word, n_component))
         return best_model
+
+if __name__ == "__main__":
+    from  asl_test_model_selectors import TestSelectors
+    test_model = TestSelectors()
+    test_model.setUp()
+    test_model.test_select_cv_interface()
