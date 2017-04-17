@@ -77,7 +77,7 @@ class SelectorBIC(ModelSelector):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         # TODO implement model selection based on BIC scores
-        raise NotImplementedError
+        # raise NotImplementedError
 
 
 class SelectorDIC(ModelSelector):
@@ -93,7 +93,7 @@ class SelectorDIC(ModelSelector):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         # TODO implement model selection based on DIC scores
-        raise NotImplementedError
+        # raise NotImplementedError
 
 
 class SelectorCV(ModelSelector):
@@ -101,8 +101,41 @@ class SelectorCV(ModelSelector):
 
     '''
 
+    def get_model_at(self, num_component, index):
+        x_train, train_length = combine_sequences(index, self.sequences)
+        self.x = x_train
+        self.length = train_length
+        return self.base_model(num_component)
+
+    def get_score_at(self, model, index):
+        x_test, test_length = combine_sequences(index, self.sequences)
+        return model.score(x_test, test_length)
+
     def select(self):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-        # TODO implement model selection using CV
-        raise NotImplementedError
+        best_model = None
+        best_logL = float("-inf")
+
+        # Split to either 3 states or the length of sequence whichever is smaller
+        split_method = KFold( n_splits=min(3,len(self.sequences)) )
+
+        for n_components in range(self.min_n_components, self.max_n_components+1):
+            for train_index, test_index in split_method.split(self.sequences):
+                try:
+                    print("Hello")
+                    loop_model = self.get_model_at(n_component, train_index)
+                    if self.verbose:
+                        print("Getting model from training data at index: {}".format(index))
+                    loop_logL = self.get_score_at(loop_model, test_index)
+                    if self.verbose:
+                        print("Getting score model and testing data at index {}".format(index) )
+                    if self.verbose:
+                        print("loop_logL: {} and best_logL: {}".format(loop_logL, best_logL))
+                    if loop_logL > best_logL:
+                        best_model = loop_model
+                        best_logL = loop_logL
+                except:
+                    if self.verbose:
+                        print("failure on {} with {} states".format(self.this_word, n_components))
+        return best_model
