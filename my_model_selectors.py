@@ -76,8 +76,38 @@ class SelectorBIC(ModelSelector):
         """
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-        # TODO implement model selection based on BIC scores
-        # raise NotImplementedError
+        n_features = len(self.X[0])
+        n_datapoints = len(self.X)
+
+        best_model = None
+        best_BIC = float("inf")
+
+        for n_component in range(self.min_n_components, self.max_n_components+1):
+            try:
+                loop_model = self.base_model(n_component)
+                loop_logL = loop_model.score(self.X, self.lengths) #LogL of current model
+
+
+                # https://discussions.udacity.com/t/number-of-parameters-bic-calculation/233235/8
+                # Initial state occupation probabilities = numStates
+                # Transition probabilities = numStates*(numStates - 1)
+                # Emission probabilities = numStates*numFeatures*2 = numMeans+numCovars
+                # Also Dana's answer at https://ai-nd.slack.com/files/ylu/F4S90AJFR/number_of_parameters_in_bic.txt
+                loop_params = n_component * (n_component - 1) + (n_component - 1) + \
+                             2 * n_features * n_component
+
+                loop_BIC = (-2 * loop_logL) + (loop_params * np.log(n_datapoints)) #use fomula from slide
+
+                if best_BIC > loop_BIC:
+                    best_model = loop_model
+                    best_BIC = loop_BIC
+            except:
+                if self.verbose:
+                    print("failure on {} with {} states".format(self.this_word, n_component))
+        return best_model
+
+
+
 
 
 class SelectorDIC(ModelSelector):
@@ -137,4 +167,4 @@ if __name__ == "__main__":
     from  asl_test_model_selectors import TestSelectors
     test_model = TestSelectors()
     test_model.setUp()
-    test_model.test_select_cv_interface()
+    test_model.test_select_bic_interface()
