@@ -92,7 +92,7 @@ class SelectorBIC(ModelSelector):
                 # Initial state occupation probabilities = numStates
                 # Transition probabilities = numStates*(numStates - 1)
                 # Emission probabilities = numStates*numFeatures*2 = numMeans+numCovars
-                # Also Dana's answer at https://ai-nd.slack.com/files/ylu/F4S90AJFR/number_of_parameters_in_bic.txt
+                # Also https://ai-nd.slack.com/files/ylu/F4S90AJFR/number_of_parameters_in_bic.txt
                 loop_params = n_component * (n_component - 1) + (n_component - 1) + \
                              2 * n_features * n_component
 
@@ -122,8 +122,33 @@ class SelectorDIC(ModelSelector):
     def select(self):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-        # TODO implement model selection based on DIC scores
-        # raise NotImplementedError
+        best_model = None
+        best_DIC = float('-inf')
+
+        for n_component in range(self.min_n_components, self.max_n_components):
+            loop_model = self.base_model(n_component)
+            this_word_logL = 0.0    #log(P(X(i)))
+            other_word_logL = 0.0   #SUM(log(P(X(all but i))
+            other_word_count = 0.0  #(M-1)
+
+            for word, XLength in self.hwords.items():
+                try:
+                    loop_logL = loop_model.score(XLength[0], XLength[1])
+                    if word == self.this_word:
+                        this_word_logL += loop_logL
+                    else:
+                        other_word_logL += loop_logL
+                        other_word_count += 1
+                except:
+                    if self.verbose:
+                        print("failure on {} with {} states".format(self.this_word, n_component))
+            if other_word_count > 0:
+                loop_DIC = this_word_logL - other_word_count/other_word_count #using formula
+                if loop_DIC > best_DIC:
+                    best_DIC = loop_DIC
+                    best_model = loop_model
+        return best_model
+
 
 
 class SelectorCV(ModelSelector):
@@ -163,8 +188,11 @@ class SelectorCV(ModelSelector):
                         print("failure on {} with {} states".format(self.this_word, n_component))
         return best_model
 
-if __name__ == "__main__":
-    from  asl_test_model_selectors import TestSelectors
-    test_model = TestSelectors()
-    test_model.setUp()
-    test_model.test_select_bic_interface()
+
+# if __name__ == "__main__":
+#     from  asl_test_model_selectors import TestSelectors
+#     test_model = TestSelectors()
+#     test_model.setUp()
+    # test_model.test_select_cv_interface()
+    # test_model.test_select_bic_interface()
+    # test_model.test_select_dic_interface()
