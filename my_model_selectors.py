@@ -131,9 +131,9 @@ class SelectorDIC(ModelSelector):
             other_word_logL = 0.0   #SUM(log(P(X(all but i))
             other_word_count = 0.0  #(M-1)
 
-            for word, XLength in self.hwords.items():
+            for word, (X, length) in self.hwords.items():
                 try:
-                    loop_logL = loop_model.score(XLength[0], XLength[1])
+                    loop_logL = loop_model.score(X, length)
                     if word == self.this_word:
                         this_word_logL += loop_logL
                     else:
@@ -143,7 +143,7 @@ class SelectorDIC(ModelSelector):
                     if self.verbose:
                         print("failure on {} with {} states".format(self.this_word, n_component))
             if other_word_count > 0:
-                loop_DIC = this_word_logL - other_word_count/other_word_count #using formula
+                loop_DIC = this_word_logL - other_word_count/float(other_word_count) #using formula
                 if loop_DIC > best_DIC:
                     best_DIC = loop_DIC
                     best_model = loop_model
